@@ -68,7 +68,7 @@ txi.salmon <- tximport(files, type = 'salmon', tx2gene = tx2gene, ignoreTxVersio
 dds <- DESeqDataSetFromTximport(txi.salmon, samples, ~condition)
 ################################################################################
 
-dds <- DESeqDataSetFromMatrix(countData=countdata, colData=coldata, design=~condition + cow)
+dds <- DESeqDataSetFromMatrix(countData=countdata, colData=coldata, design=~cow + condition)
 dds <- DESeq(dds)
 
 pd.set_option('display.max_colwidth', None)
@@ -147,7 +147,7 @@ one.g2 <- as.data.frame(dds.norm) %>% filter(rownames(dds.norm) == 'ENSBTAG00000
 one.g3 <- as.data.frame(dds.norm) %>% filter(rownames(dds.norm) == 'ENSBTAG00000025494') # MPRB gene (PAQR8)
 
 
-sel.gene.name <- "ENSBTAG00000027654"
+sel.gene.name <- "ENSBTAG00000006731"
 sel.gene <- as.data.frame(dds.norm) %>% filter(rownames(dds.norm) == sel.gene.name)
 sel.gene.t <- data.frame(val=t(sel.gene)[,1], id=rownames(t(sel.gene)), group=condition)
 
@@ -159,7 +159,7 @@ sel.gene.t %>%
   theme_classic() +
   scale_fill_manual(values = wes_palette("Darjeeling1")) +
   geom_point(size = 1.5) +
-  ylim(0,5000)
+  ylim(0,8000)
 
 boxplot(data.frame(t(one.g3[1:6]), t(one.g3[7:12]), t(one.g3[13:18]), t(one.g3[19:24]), t(one.g3[25:30])))
 stripchart(data.frame(t(one.g3[1:6]), t(one.g3[7:12]), t(one.g3[13:18]), t(one.g3[19:24]), t(one.g3[25:30])),
