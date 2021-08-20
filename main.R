@@ -158,8 +158,9 @@ sel.gene.t %>%
   #  geom_text(aes(label = id), na.rm = F, hjust = -0.3) +
   theme_classic() +
   scale_fill_manual(values = wes_palette("Darjeeling1")) +
-  geom_point(size = 1.5) +
-  ylim(0,8000)
+#  geom_point(size = 1.5) +
+  geom_jitter(width = 0.1, size = 1.5) +
+  ylim(0,1500)
 
 boxplot(data.frame(t(one.g3[1:6]), t(one.g3[7:12]), t(one.g3[13:18]), t(one.g3[19:24]), t(one.g3[25:30])))
 stripchart(data.frame(t(one.g3[1:6]), t(one.g3[7:12]), t(one.g3[13:18]), t(one.g3[19:24]), t(one.g3[25:30])),
