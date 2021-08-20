@@ -33,7 +33,7 @@ countData <- countData[,-c(1:6)]
 colnames(countData) <- gsub(".bam|Mapped/", "", colnames(countData))
 
 # If star file
-colnames(countData) <- gsub("Star_mapped/|Aligned.sortedByCoord.out.bam", "", colnames(countData))
+colnames(countData) <- gsub(".*Star_mapped/|Aligned.sortedByCoord.out.bam", "", colnames(countData))
 
 col_order <- c("S1", "S6", "S11", "S16", "S21", "S26",
                "S2", "S7", "S12", "S17", "S22", "S27",
@@ -226,7 +226,7 @@ annotation_colors = list(
   'cow' = c('1' = '#9986A5', '2' = '#79402E', '3' = '#CCBA72', '4' = '#0F0D0E',
             '5' = '#D9D0D3', '6' = '#5BBCD6'))
 
-pheatmap(mat.pgrmc1.500[1:30,], annotation_col = new_annotation_data, 
+pheatmap(matrix[1:30,], annotation_col = new_annotation_data, 
          scale = "row", annotation_colors = annotation_colors, 
          border_color = 'white') # Add cutree_cols=6 to add heatmap cutting
 
