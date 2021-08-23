@@ -239,6 +239,13 @@ morecols <- colorRampPalette(mypalette)
 heatmap.2(highly.variable.genecounts,col=rev(morecols(50)),trace="none", 
           main="Top 500 most variable genes across samples")
 
+# Samples correlation heatmap
+sample.dist <- dist(t(assay(rld)))
+sample.dist.mat <- as.matrix(sample.dist)
+rownames(sample.dist.mat) <- paste(rld$condition, rld$cow, sep="-")
+colnames(sample.dist.mat) <- paste(rld$condition, rld$cow, sep="-")
+pheatmap(sample.dist.mat, clustering_distance_rows=sample.dist, clusterin_distance_cols=sample.dist)
+
 # UpSetR
 listInput <- list(pgrmc1=pgrmc1.names, pgmrc2=pgrmc2.names, mPRa=mPRa.names, mPRb=mPRb.names)
 upset(fromList(listInput), order.by = "freq", point.size = 3.5, line.size = 1.5,
