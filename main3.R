@@ -194,6 +194,7 @@ wt_init.ko_init.filtred.DEGs <- add_gene_symbols(res.wt_init.ko_init.fc)
 # Save DEGs
 write_DEGs <- function(df, name){
   write.table(df[order(df$pvalue),], paste(deparse(substitute(name)), ".tsv", sep=""), sep = "\t", quote = F, row.names = F)
+  write.xlsx(df[order(df$pvalue),], paste(deparse(substitute(name)), ".xls", sep=""), row.names = F)
 }
 
 # topGO function
