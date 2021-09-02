@@ -192,8 +192,8 @@ wt_prog.ko_prog.filtred.DEGs <- add_gene_symbols(res.wt_prog.ko_prog.fc)
 wt_init.ko_init.filtred.DEGs <- add_gene_symbols(res.wt_init.ko_init.fc)
 
 # Save DEGs
-write_DEGs <- function(df){
-  write.table(df, paste(deparse(substitute(df)), ".tsv", sep=""), sep = "\t", quote = F, row.names = F)
+write_DEGs <- function(df, name){
+  write.table(df[order(df$pvalue),], paste(deparse(substitute(name)), ".tsv", sep=""), sep = "\t", quote = F, row.names = F)
 }
 
 # topGO function
@@ -211,9 +211,9 @@ topgo_ready <- function(df){ #use add_gene_symbols output
                 geneSel=selection,
                 nodeSize=10)
   
-  results.ks <- runTest(GOdata, algorithm="classic", statistic="fisher")
-  goEnrichment <- GenTable(GOdata, fisher=results.ks, orderBy="fisher", topNodes=500, numChar=1000)
-  goEnrichment$fisher <- as.numeric(goEnrichment$KS)
+  results.fisher <- runTest(GOdata, algorithm="classic", statistic="fisher")
+  goEnrichment <- GenTable(GOdata, fisher=results.fisher, orderBy="fisher", topNodes=500, numChar=1000)
+  goEnrichment$fisher <- as.numeric(goEnrichment$fisher)
   goEnrichment$fisher[is.na(goEnrichment$fisher)] <- as.numeric(1.1e-30)
   goEnrichment <- goEnrichment[goEnrichment$fisher<0.05,]
   annotGenes = lapply(goEnrichment$GO.ID, function(x) as.character(unlist(genesInTerm(object = GOdata, whichGO = x))))
