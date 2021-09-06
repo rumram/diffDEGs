@@ -12,6 +12,7 @@ library(pheatmap)
 library(FactoMineR)
 library(factoextra)
 library(ggrepel)
+library(wesanderson)
 
 # Format counts dataframe obtained from featurecounts
 countData <- read.csv("sus_star_featurecounts.txt", sep = "\t", header = F, skip=1)
@@ -24,22 +25,34 @@ countData <- countData[,-c(1:6)]
 colnames(countData) <- gsub(".*Star_mapped/|Aligned.sortedByCoord.out.bam", "",
                             colnames(countData))
 
+countData <- countData[,-which(names(countData) %in% c("G10-68_ctrl", "G10-68_EVs"))]
+countData <- countData[,-which(names(countData) %in% c("G10-68_ctrl", "G10-68_EVs", "G10-78_ctrl", "G10-78_EVs"))]
+
 col_order <- c("G10-64_ctrl", "G10-68_ctrl", "G10-71_ctrl", "G10-73_ctrl", "G10-75_ctrl", "G10-78_ctrl",
                "G10-64_EVs", "G10-68_EVs", "G10-71_EVs", "G10-73_EVs", "G10-75_EVs", "G10-78_EVs")
+
+col_order <- c("G10-64_ctrl", "G10-71_ctrl", "G10-73_ctrl", "G10-75_ctrl", "G10-78_ctrl",
+               "G10-64_EVs", "G10-71_EVs", "G10-73_EVs", "G10-75_EVs", "G10-78_EVs")
+
+col_order <- c("G10-64_ctrl", "G10-71_ctrl", "G10-73_ctrl", "G10-75_ctrl",
+               "G10-64_EVs", "G10-71_EVs", "G10-73_EVs", "G10-75_EVs")
 
 countdata <- countData[, col_order]
 countdata = data.frame(lapply(countdata, function(x) as.numeric(as.character(x))),
                        check.names=F, row.names = rownames(countdata))
 
 condition <- factor(c(rep("ctrl", 6), rep("EVs", 6)))
+condition <- factor(c(rep("ctrl", 4), rep("EVs", 4)))
 id <- rep(factor(seq(1,6,1)),2)
+id <- rep(factor(seq(1,4,1)),2)
+
 coldata <- data.frame(row.names=colnames(countdata), condition, id)
 
 dds <- DESeqDataSetFromMatrix(countData=countdata, colData=coldata, design=~id + condition)
 #dds <- DESeq(dds)
 
 # Filter low counts
-keep <- rowSums(counts(dds) > 0) >= 4
+keep <- rowSums(counts(dds) > 0) >= 3
 dds <- dds[keep,]
 dds$condition <- relevel(dds$condition, ref = "ctrl")
 dds.res <- DESeq(dds)
@@ -105,21 +118,31 @@ mtext(c(paste("-", 1.5, "fold"), paste("+", 1.5, "fold")), side = 3, at = c(-1, 
       cex = 0.8, line = 0.5)
 
 # Boxplot of individual genes
+expression_boxplot <- function(gene_name){
+
 dds.norm <- counts(dds.res, normalized = T)
-sel.gene.name <- "ENSSSCG00000027525"
+sel.gene.name <- gene_name
+sel.gene.symb <- sus.genes %>% filter(sus.genes$ensembl_gene_id == paste(sel.gene.name))
+sel.gene.symb <- sel.gene.symb$external_gene_name
 sel.gene <- as.data.frame(dds.norm) %>% filter(rownames(dds.norm) == sel.gene.name)
 sel.gene.t <- data.frame(val=t(sel.gene)[,1], id=rownames(t(sel.gene)), group=condition)
 
-sel.gene.t %>% 
+z <- sel.gene.t %>% 
   ggplot(aes(x=group, y=val, label=id)) +
   stat_boxplot(geom = 'errorbar', width = .2) +
   geom_boxplot(width=.4, aes(fill=group)) +
+  ggtitle(paste(sel.gene.symb, "gene expression")) +
   #  geom_text(aes(label = id), na.rm = F, hjust = -0.3) +
   theme_classic() +
   scale_fill_manual(values = wes_palette("Darjeeling1")) +
   #  geom_point(size = 1.5) +
   geom_jitter(width = 0.1, size = 1.5) +
-  ylim(0,2500)
+  geom_text(check_overlap = TRUE,
+            position=position_jitter(width=0.15), size = 3) +
+  ylab("Normalized read counts") + xlab("Group") +
+  ylim(-0.1,(max(sel.gene) + 0.05*(max(sel.gene))))
+ggsave(paste(sel.gene.symb, ".jpg", sep = ""), plot = z)
+}
 
 # PCA
 pca.t <- t(assay(rld))
@@ -150,3 +173,55 @@ rownames(sample.dist.mat) <- colnames(countdata)
 colnames(sample.dist.mat) <- colnames(countdata)
 pheatmap(sample.dist.mat, clustering_distance_rows=sample.dist, 
          clustering_distance_cols = sample.dist, border_color = 'white')
+
+# Individual genes
+# PLAU PTGER4 MMP9 STAT3 FGFR2 TGFBR1 SMAD1 IL6R LIFR CFL2 ANXA2 OCLN EGFR FN1 VIM MMP2 APC IFNG TGFBR3 SCARB1
+genes <- c("PLAU", "PTGER4", "MMP9", "STAT3", "FGFR2", "TGFBR1", "SMAD1", "IL6R", "LIFR", "CFL2", "ANXA2", "OCLN", "EGFR",
+           "FN1", "VIM", "MMP2", "APC", "IFNG", "TGFBR3", "SCARB1")
+
+# Create dataframe of DEGs with gene symbols and ensembl id
+library(biomaRt)
+add_gene_symbols <- function(df){
+  symb <- numeric(0)
+  mart <- useDataset("sscrofa_gene_ensembl", useMart("ensembl"))
+  symb <- getBM(filters= "ensembl_gene_id", attributes= c("ensembl_gene_id", "external_gene_name"),
+                values=rownames(df),mart= mart)
+  rownames(symb) <- symb[,1]
+  temp.list <- merge(symb, df, by=0, all=TRUE)
+  temp.list <- temp.list[-1]
+  return(temp.list)
+}
+
+# Save DEGs
+library(xlsx)
+write_DEGs <- function(df, name){
+  write.table(df[order(df$pvalue),], paste(deparse(substitute(name)), ".tsv", sep=""), sep = "\t", quote = F, row.names = F)
+  write.xlsx(df[order(df$pvalue),], paste(deparse(substitute(name)), ".xls", sep=""), row.names = F)
+}
+
+# Boxplot of individual genes
+library(wesanderson)
+library(RColorBrewer)
+dds.norm <- counts(dds.res, normalized = T)
+sel.gene.name <- "ENSSSCG00000021514"
+sel.gene <- as.data.frame(dds.norm) %>% filter(rownames(dds.norm) == sel.gene.name)
+sel.gene.t <- data.frame(val=t(wt.bind)[,1], id=seq(1,67,1), group=c(rep("WT prog", 26), rep("WT init", 4), rep("sBC", 15), rep("mBCs", 11), rep("mBCs.one", 5), rep("mBCs.next", 6)))
+
+sel.gene.t <- data.frame(val=t(sel.gene)[,1], id=rownames(t(sel.gene)), group=condition)
+#sel.gene.t.excl <- sel.gene.t[!grepl("KO_init|WT_init", sel.gene.t$group),]
+
+sel.gene.t %>% 
+  ggplot(aes(x=group, y=val, label=id)) +
+  ggtitle("CD73 (NT5E) gene expression") +
+  stat_boxplot(geom = 'errorbar', width = .2) +
+  geom_boxplot(width=.4, aes(fill=group), outlier.shape = NA) +
+  #  geom_text(aes(label = id), na.rm = F, hjust = -0.3) +
+  theme_classic() +
+  scale_fill_brewer(palette = "Pastel2") +
+  #  geom_point(size = 1.5) +
+  geom_jitter(width = 0.1, size = 1.5) +
+  ylim(-0.1,90) +
+  ylab("Normalized read counts") + xlab("Group") +
+  geom_hline(yintercept=0, linetype="dashed", color = "lightgrey") +
+  theme(plot.title = element_text(hjust = 0.5))
+
